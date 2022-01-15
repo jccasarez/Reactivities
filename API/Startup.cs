@@ -38,6 +38,19 @@ namespace API
             {
                 opt.UseSqlite(_config.GetConnectionString("DefaultConnection"));
             });
+            //This cors is required when we are trying to access a resource from a different domain
+            //Our client app is running on localhost:3000 which is different from the API domain which is running on 5000
+            //By adding a cors policy, we are returning a header that says "we are allowed to use any method (Get Post etc.)
+            //allow any header, but make sure it has origins from client application. We could say any origin, but we lock it down
+            //to client
+            //Need to add it as middle ware as well. 
+            services.AddCors(opt => 
+            {
+                opt.AddPolicy("CorsPolicy", policy =>
+                {
+                    policy.AllowAnyMethod().AllowAnyHeader().WithOrigins("http://localhost:3000");
+                });
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -52,7 +65,8 @@ namespace API
             // app.UseHttpsRedirection();
 
             app.UseRouting();
-
+            //Order here is important, so we add it directly after app.Use Routing
+            app.UseCors("CorsPolicy");
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
