@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace API.Controllers
 {
+    
     [ApiController]
     [Route("api/[controller]")]
     public class AccountController : ControllerBase
@@ -94,6 +95,7 @@ namespace API.Controllers
             };
         }
 
+        [Authorize]
         [HttpGet]
         public async Task<ActionResult<UserDto>> GetCurrentUser()
         {
