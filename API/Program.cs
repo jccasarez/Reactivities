@@ -1,16 +1,13 @@
 
-using MediatR;
-using Microsoft.EntityFrameworkCore;
-using Persistence;
-using Application.Activities;
-using Application.Core;
 using API.Extensions;
 using API.Middleware;
-using Microsoft.AspNetCore.Identity;
+using API.SignalR;
 using Domain;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Authorization;
-using API.SignalR;
+using Microsoft.EntityFrameworkCore;
+using Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,13 +26,34 @@ var app = builder.Build();
 // Configure the HTTP request pipeline. This is referred to as middleware. 
 app.UseMiddleware<ExceptionMiddleware>();
 
+app.UseXContentTypeOptions();
+app.UseReferrerPolicy(opt => opt.NoReferrer());
+app.UseXXssProtection(opt => opt.EnabledWithBlockMode());
+app.UseXfo(opt=> opt.Deny());
+app.UseCsp(opt => opt
+    .BlockAllMixedContent()
+    .StyleSources(s => s.Self().CustomSources("https://fonts.googleapis.com"))
+    .FontSources(s => s.Self().CustomSources("https://fonts.gstatic.com", "data:"))
+    .FormActions(s => s.Self())
+    .FrameAncestors(s => s.Self())
+    .ImageSources(s => s.Self().CustomSources("blob:", "https://res.cloudinary.com"))
+    .ScriptSources(s => s.Self())
+);
+
 //Things that can do something with the HTTP request on it's way in and on it's way out
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
+else
+{
+    app.Use(async (context, next) =>
+    {
+        context.Response.Headers.Add("Script-Transport-Security", "max-age=31536000");
+        await next.Invoke();
+    });
+}
 app.UseCors("CorsPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
@@ -58,8 +76,7 @@ try
 }
 catch (Exception ex)
 {
-    
-    var logger = services.GetRequiredService<Logger<Program>>();
+    var logger = services.GetRequiredService<ILogger<Program>>();
     logger.LogError(ex, "An error occured during migration");
 }
 app.Run();
